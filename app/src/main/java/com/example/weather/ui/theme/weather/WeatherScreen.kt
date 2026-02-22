@@ -1,20 +1,22 @@
 package com.example.weather.ui.theme.weather
 
-import com.example.weather.ui.theme.weather.WeatherViewModel
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.weather.utils.Result
 import coil.compose.AsyncImage
 
 @Composable
-fun WeatherScreen(viewModel: WeatherViewModel = viewModel()) {
+fun WeatherScreen(viewModel: WeatherViewModel) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val weatherState by viewModel.weatherState.collectAsState()
+    val favorites by viewModel.favoriteWeathers.collectAsState()
 
     Column(
         modifier = Modifier
@@ -22,7 +24,6 @@ fun WeatherScreen(viewModel: WeatherViewModel = viewModel()) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { viewModel.onSearchQueryChange(it) },
@@ -60,36 +61,79 @@ fun WeatherScreen(viewModel: WeatherViewModel = viewModel()) {
                     style = MaterialTheme.typography.displayLarge
                 )
 
-                Text(
-                    text = data.weather[0].description.replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.titleLarge
-                )
+                Button(
+                    onClick = { viewModel.saveToFavorites(data) },
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Tallenna")
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         WeatherDetailRow("Tuntuu kuin", "${data.main.feels_like.toInt()}°C")
-                        WeatherDetailRow("Min / Max", "${data.main.tempMin.toInt()}°C / ${data.main.tempMax.toInt()}°C")
                         WeatherDetailRow("Kosteus", "${data.main.humidity}%")
                         WeatherDetailRow("Tuuli", "${data.wind.speed} m/s")
-                        WeatherDetailRow("Paine", "${data.main.pressure} hPa")
                     }
                 }
             }
-            is Result.Error -> Text("Virhe: ${state.exception.message}")
+            is Result.Error -> Text("Virhe: ${state.exception.message}", color = MaterialTheme.colorScheme.error)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Tallennetut",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            items(favorites) { savedWeather ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(text = savedWeather.cityName, fontWeight = FontWeight.Bold)
+                            Text(text = savedWeather.description, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(
+                            text = "${savedWeather.temp.toInt()}°C",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-
 @Composable
 fun WeatherDetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(text = label)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
+        Text(text = value, fontWeight = FontWeight.Bold)
     }
 }
